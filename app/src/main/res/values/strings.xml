@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Popular Movies</string>
+    <string name="activity_movie_details_title">Movie Details</string>
+    <string name="activity_about_title">About</string>
+
+    <!-- Used in MainActivity and activity_main.xml -->
+    <string name="activity_main_title_popular">Popular Movies</string>
+    <string name="activity_main_title_top_rated">Top Rated Movies</string>
+    <string name="activity_main_postergrid_error_msg">
+        Sorry, could not download movie listing data.\n\nTap to retry.
+    </string>
+    <string name="activity_main_movie_listing_selection_title">Choose the movie listing:</string>
+    <string name="activity_main_option_show_most_popular_first">
+        Show most popular movies first
+    </string>
+    <string name="activity_main_option_show_top_rated_first">Show top rated movies first</string>
+
+    <!-- Used in menu_activity_main.xml -->
+    <string name="menu_activity_main_select_movie_listing">Select movie listing</string>
+    <string name="menu_activity_main_about">About</string>
+
+    <!-- Used in movie_poster_grid_item.xml -->
+    <string name="poster_grid_item_error_msg">
+        Sorry, could not download movie data.\n\nTap to retry.
+    </string>
+    <string name="poster_grid_item_no_picture_msg">
+        No picture available for this movie.
+    </string>
+
+    <!-- Used in MovieDetailsActivity / activity_movie_details.xml -->
+    <string name="activity_movie_details_release_date">Release date: %1$s</string>
+    <string name="activity_movie_details_rating">Rating: %1$s</string>
+    <string name="activity_movie_details_listing_position">Position %1$d in %2$s</string>
+    <string name="activity_movie_details_popular">popular movies</string>
+    <string name="activity_movie_details_top_rated">top rated movies</string>
+    <string name="activity_movie_details_poster_error">
+        Sorry, could not load movie poster.\n\nTap to retry.
+    </string>
+    <string name="activity_movie_details_load_details_failure">
+        Sorry, loading movie details failed.
+    </string>
+
+    <!-- Used in activity_about.xml -->
+    <string name="activity_about_text">
+        \"Popular Movies\" app
+        \nCopyright &#169; 2017 Stefan Kleeschulte
+        \n\n\nMovie data and pictures from The Movie Database (TMDb)
+        \nthemoviedb.org
+        \n\n\nUsed libraries:
+        \n\nButter Knife
+        \nEventBus
+        \nRxJava / RxAndroid
+        \nRetrofit / OkHttp
+        \nGson
+        \nPicasso
+    </string>
+</resources>

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.percent.PercentRelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rl_poster_grid_item"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/poster_grid_item_background">
+
+    <!-- Inner percent relative layout for positioning the "movie position" text view -->
+    <android.support.percent.PercentRelativeLayout
+        app:layout_widthPercent="100%"
+        app:layout_aspectRatio="66.66667%">
+
+        <!-- Movie poster image view -->
+        <ImageView
+            android:id="@+id/iv_poster_grid_item_poster"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            tools:ignore="ContentDescription" />
+
+        <!-- Scrim for "position in listing" text view -->
+        <View
+            android:layout_width="match_parent"
+            app:layout_heightPercent="20%"
+            android:background="@drawable/poster_grid_view_scrim">
+        </View>
+
+        <!-- "Position in listing" text view -->
+        <TextView
+            android:id="@+id/tv_poster_grid_item_listing_position"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_marginTopPercent="1%"
+            app:layout_marginLeftPercent="3%"
+            android:textSize="@dimen/poster_grid_item_text_size_listing_position"
+            android:textColor="@android:color/white" />
+
+        <!-- "No poster" text view -->
+        <TextView
+            android:id="@+id/tv_poster_grid_item_no_poster"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:gravity="center"
+            android:padding="@dimen/poster_grid_item_text_view_padding"
+            android:textSize="@dimen/poster_grid_item_text_size_no_poster"
+            android:visibility="gone" />
+
+        <!-- Movie poster loading indicator -->
+        <ProgressBar
+            android:id="@+id/pb_poster_grid_item_loading_indicator"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_centerInParent="true"
+            android:visibility="gone" />
+
+        <!-- Movie poster loading error -->
+        <TextView
+            android:id="@+id/tv_poster_grid_item_error"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:gravity="center"
+            android:padding="@dimen/poster_grid_item_text_view_padding"
+            android:textSize="@dimen/poster_grid_item_text_size_error_msg"
+            android:text="@string/poster_grid_item_error_msg"
+            android:visibility="gone" />
+
+    </android.support.percent.PercentRelativeLayout>
+
+</android.support.percent.PercentRelativeLayout>

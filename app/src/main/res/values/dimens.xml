@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Default screen margins, per the Android Design guidelines. -->
+    <dimen name="activity_horizontal_margin">16dp</dimen>
+    <dimen name="activity_vertical_margin">16dp</dimen>
+
+    <!-- Values for poster grid -->
+    <!-- Minimum column width. According to https://material.io/devices/ the smallest dp-width on a
+         phone is currently 320dp, so 150dp will result in at least 2 columns on every phone. -->
+    <dimen name="poster_grid_min_column_width">150dp</dimen>
+    <!-- Material design guide specs for image only grid lists: spacing 1dp or 4dp
+         https://material.io/guidelines/components/grid-lists.html#grid-lists-specs -->
+    <dimen name="poster_grid_spacing">4dp</dimen>
+    <dimen name="poster_grid_text_size_error_msg">24sp</dimen>
+    <dimen name="poster_grid_item_text_size_no_poster">14sp</dimen>
+    <dimen name="poster_grid_item_text_size_listing_position">14sp</dimen>
+    <dimen name="poster_grid_item_text_size_error_msg">14sp</dimen>
+    <dimen name="poster_grid_item_text_view_padding">16dp</dimen>
+
+    <!-- Values for movie details activity -->
+    <dimen name="movie_details_text_size_title_max">24sp</dimen>
+    <dimen name="movie_details_text_size_infos">14sp</dimen>
+    <dimen name="movie_details_text_size_overview">14sp</dimen>
+    <dimen name="movie_details_poster_error_text_size">14sp</dimen>
+    <dimen name="movie_details_poster_error_text_view_padding">16dp</dimen>
+</resources>

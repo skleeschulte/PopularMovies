@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Values for screens with width of 820dp or more. This includes 7" and 10" devices in
+         landscape (~960dp and ~1280dp respectively). -->
+
+    <!-- Horizontal screen margin -->
+    <dimen name="activity_horizontal_margin">64dp</dimen>
+</resources>

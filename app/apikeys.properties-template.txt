@@ -1,0 +1,6 @@
+# Make a copy of this file named apikeys.properties (in the app directory) and replace "ABC" with
+# your API key.
+
+# The file apikeys.properties is configured to be ignored by GIT.
+
+themoviedbApiKey=ABC
