@@ -102,6 +102,13 @@
             android:layout_marginTop="@dimen/activity_vertical_margin"
             android:textSize="@dimen/movie_details_text_size_overview"/>
 
+        <!-- Video list block -->
+        <include
+            layout="@layout/video_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/tv_movie_details_overview" />
+
     </RelativeLayout>
 
 </ScrollView>

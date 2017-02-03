@@ -5,14 +5,20 @@
 package biz.smk.popularmovies;
 
 import android.annotation.SuppressLint;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -22,12 +28,18 @@ import java.util.Date;
 
 import biz.smk.popularmovies.data.MovieListing;
 import biz.smk.popularmovies.data.MovieListingMovieDetailsStore;
+import biz.smk.popularmovies.tmdbapi.TmdbApiClient;
+import biz.smk.popularmovies.tmdbapi.TmdbApiClientFactory;
 import biz.smk.popularmovies.tmdbapi.responseobjects.MovieListingMovieDetails;
+import biz.smk.popularmovies.tmdbapi.responseobjects.MovieVideoDetails;
+import biz.smk.popularmovies.tmdbapi.responseobjects.MovieVideos;
 import biz.smk.popularmovies.utilities.PosterLoader;
+import biz.smk.popularmovies.utilities.SingleLoader;
 import biz.smk.popularmovies.utilities.StringUtils;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
+import rx.Single;
 
 /**
  * Movie details activity.
@@ -48,6 +60,8 @@ public class MovieDetailsActivity extends AppCompatActivity {
     Runnable mPosterSizeRunnable;
     PosterLoader mPosterLoader;
 
+    private static final int VIDEO_LIST_LOADER_ID = 0;
+
     @BindView(R.id.tv_movie_details_title) TextView mTitleView;
     @BindView(R.id.rl_movie_details_poster_layout) RelativeLayout mPosterLayout;
     @BindView(R.id.iv_movie_details_poster) ImageView mPosterView;
@@ -57,6 +71,12 @@ public class MovieDetailsActivity extends AppCompatActivity {
     @BindView(R.id.tv_movie_details_rating) TextView mRatingView;
     @BindView(R.id.tv_movie_details_listing_position) TextView mListingPositionView;
     @BindView(R.id.tv_movie_details_overview) TextView mOverviewView;
+
+    @BindView(R.id.pb_movie_details_video_list_loading_indicator)
+    ProgressBar mVideoListLoadingIndicator;
+    @BindView(R.id.tv_movie_details_video_list_empty_msg) TextView mVideoListEmptyMsg;
+    @BindView(R.id.tv_movie_details_video_list_error_msg) TextView mVideoListErrorMsg;
+    @BindView(R.id.ll_movie_details_video_list) LinearLayout mVideoList;
 
     /**
      * Extracts extras from the intent, gets the movie data (by movieId from the intent extras) and
@@ -165,6 +185,9 @@ public class MovieDetailsActivity extends AppCompatActivity {
         if (overview != null) {
             mOverviewView.setText(overview);
         }
+
+        // Load video list
+        loadVideoList(false);
     }
 
     /**
@@ -266,6 +289,111 @@ public class MovieDetailsActivity extends AppCompatActivity {
     }
 
     /**
+     * Handles clicks on the video list error message (triggers loading the video list).
+     *
+     * @param view The clicked view.
+     */
+    @SuppressWarnings("unused")
+    @OnClick(R.id.tv_movie_details_video_list_error_msg)
+    void handleVideoListErrorClick(View view) {
+        loadVideoList(true);
+    }
+
+    private void loadVideoList(boolean forceReload) {
+        setVideoListPendingView();
+
+        if (forceReload) {
+            getSupportLoaderManager()
+                    .restartLoader(VIDEO_LIST_LOADER_ID, null, new VideoListLoaderCallbacks());
+        } else {
+            getSupportLoaderManager()
+                    .initLoader(VIDEO_LIST_LOADER_ID, null, new VideoListLoaderCallbacks());
+        }
+    }
+
+    private void setVideoListPendingView() {
+        mVideoListLoadingIndicator.setVisibility(View.VISIBLE);
+        mVideoListErrorMsg.setVisibility(View.GONE);
+        mVideoListEmptyMsg.setVisibility(View.GONE);
+        mVideoList.setVisibility(View.GONE);
+    }
+
+    /**
+     * Update the UI after the video list was loaded. Displays a text message if there are no
+     * videos. Otherwise populates a LinearLayout with clickable video entries. Only videos of type
+     * trailer and hosted on YouTube are displayed.
+     *
+     * @param videos MovieVideos result from TMDb API.
+     */
+    private void setVideoListLoadedView(MovieVideos videos) {
+        mVideoListLoadingIndicator.setVisibility(View.GONE);
+        mVideoListErrorMsg.setVisibility(View.GONE);
+        mVideoListEmptyMsg.setVisibility(View.GONE);
+        mVideoList.setVisibility(View.GONE);
+
+        int videoCount = 0;
+        mVideoList.removeAllViews();
+
+        for (MovieVideoDetails details : videos.getMovieVideoDetails()) {
+            if (!details.isTrailer() || !details.isHostedOnYouTube()) continue;
+
+            String name = details.getName();
+            String key = details.getKey();
+
+            if (TextUtils.isEmpty(name) || TextUtils.isEmpty(key)) continue;
+
+            videoCount++;
+
+            View listItem =
+                    getLayoutInflater().inflate(R.layout.video_list_item, mVideoList, false);
+
+            TextView title = (TextView) listItem.findViewById(R.id.tv_video_list_item_title);
+            title.setText(name);
+
+            listItem.setTag(key);
+
+            listItem.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    String videoId = (String) v.getTag();
+                    openYouTubeVideo(videoId);
+                }
+            });
+
+            mVideoList.addView(listItem);
+        }
+
+        if (videoCount == 0) {
+            mVideoListEmptyMsg.setVisibility(View.VISIBLE);
+        } else {
+            mVideoList.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void setVideoListErrorView() {
+        mVideoListLoadingIndicator.setVisibility(View.GONE);
+        mVideoListErrorMsg.setVisibility(View.VISIBLE);
+        mVideoListEmptyMsg.setVisibility(View.GONE);
+        mVideoList.setVisibility(View.GONE);
+    }
+
+    /**
+     * Opens the YouTube app if it is available, otherwise opens a browser with the YouTube URL.
+     *
+     * @param videoId The ID of the YouTube video to show.
+     */
+    private void openYouTubeVideo(String videoId) {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube://" + videoId));
+            startActivity(intent);
+        } catch (ActivityNotFoundException ex) {
+            Intent intent = new Intent(Intent.ACTION_VIEW,
+                    Uri.parse("http://www.youtube.com/watch?v=" + videoId));
+            startActivity(intent);
+        }
+    }
+
+    /**
      * Explicitly handles presses on the back button in the AppCompat Toolbar, because otherwise the
      * parent activity gets an empty savedInstanceState when resumed.
      *
@@ -281,6 +409,36 @@ public class MovieDetailsActivity extends AppCompatActivity {
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    /**
+     * Class for handling video list loading.
+     */
+    private class VideoListLoaderCallbacks implements
+            LoaderManager.LoaderCallbacks<SingleLoader.Result<MovieVideos>> {
+
+        @Override
+        public Loader<SingleLoader.Result<MovieVideos>> onCreateLoader(int id, Bundle args) {
+            TmdbApiClient apiClient = TmdbApiClientFactory.createApiClient();
+            Single<MovieVideos> request = apiClient.getMovieVideos(mMovieId);
+
+            return new SingleLoader<>(MovieDetailsActivity.this, request);
+        }
+
+        @Override
+        public void onLoadFinished(Loader<SingleLoader.Result<MovieVideos>> loader,
+                                   SingleLoader.Result<MovieVideos> data) {
+            if (data.isError()) {
+                Log.e(TAG, "failed to load video list: " + data.getError());
+                setVideoListErrorView();
+            } else {
+                setVideoListLoadedView(data.getResult());
+            }
+        }
+
+        @Override
+        public void onLoaderReset(Loader<SingleLoader.Result<MovieVideos>> loader) {}
+
     }
 
 }

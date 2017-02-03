@@ -40,6 +40,16 @@
     <string name="activity_movie_details_load_details_failure">
         Sorry, loading movie details failed.
     </string>
+    <string name="activity_movie_details_video_list_caption">Trailers</string>
+    <string name="activity_movie_details_video_list_error_msg">
+        Sorry, could not download trailer list.\nTap to retry.
+    </string>
+    <string name="activity_movie_details_video_list_empty_msg">
+        Sorry, no trailers available for this movie.
+    </string>
+
+    <!-- Used in video_list_item.xml -->
+    <string name="video_list_item_play_icon_content_description">Play trailer</string>
 
     <!-- Used in activity_about.xml -->
     <string name="activity_about_text">

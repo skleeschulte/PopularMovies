@@ -6,7 +6,9 @@ package biz.smk.popularmovies.tmdbapi;
 
 import biz.smk.popularmovies.tmdbapi.responseobjects.Configuration;
 import biz.smk.popularmovies.tmdbapi.responseobjects.MovieListingPage;
+import biz.smk.popularmovies.tmdbapi.responseobjects.MovieVideos;
 import retrofit2.http.GET;
+import retrofit2.http.Path;
 import retrofit2.http.Query;
 import rx.Single;
 
@@ -26,5 +28,8 @@ public interface TmdbApiClient {
 
     @GET("movie/popular?api_key=")
     Single<MovieListingPage> getPopularMovies(@Query("page") int pageNr);
+
+    @GET("movie/{id}/videos?api_key=")
+    Single<MovieVideos> getMovieVideos(@Path("id") long movieId);
 
 }
