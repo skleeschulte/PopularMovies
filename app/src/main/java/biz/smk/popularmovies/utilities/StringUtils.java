@@ -44,4 +44,14 @@ public class StringUtils {
         return string.replaceAll(" ", "\u00A0");
     }
 
+    /**
+     * Removes all carriage return characters (\r) from the given String.
+     *
+     * @param string The string to remove carriage returns from.
+     * @return String without carriage returns.
+     */
+    public static String removeCarriageReturns(String string) {
+        return string.replaceAll("\\r", "");
+    }
+
 }

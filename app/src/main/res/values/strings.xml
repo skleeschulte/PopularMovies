@@ -51,6 +51,16 @@
     <!-- Used in video_list_item.xml -->
     <string name="video_list_item_play_icon_content_description">Play trailer</string>
 
+    <!-- Used in review_list.xml -->
+    <string name="review_list_caption">User reviews</string>
+    <string name="review_list_error_msg">
+        Sorry, could not download user reviews.\nTap to retry.
+    </string>
+    <string name="review_list_empty_msg">Sorry, no user reviews available for this movie.</string>
+
+    <!-- Used in review_list_item.xml -->
+    <string name="review_list_item_author_caption">Author:</string>
+
     <!-- Used in activity_about.xml -->
     <string name="activity_about_text">
         \"Popular Movies\" app

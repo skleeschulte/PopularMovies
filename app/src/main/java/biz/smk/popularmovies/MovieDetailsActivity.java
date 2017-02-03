@@ -31,6 +31,8 @@ import biz.smk.popularmovies.data.MovieListingMovieDetailsStore;
 import biz.smk.popularmovies.tmdbapi.TmdbApiClient;
 import biz.smk.popularmovies.tmdbapi.TmdbApiClientFactory;
 import biz.smk.popularmovies.tmdbapi.responseobjects.MovieListingMovieDetails;
+import biz.smk.popularmovies.tmdbapi.responseobjects.MovieReviewDetails;
+import biz.smk.popularmovies.tmdbapi.responseobjects.MovieReviews;
 import biz.smk.popularmovies.tmdbapi.responseobjects.MovieVideoDetails;
 import biz.smk.popularmovies.tmdbapi.responseobjects.MovieVideos;
 import biz.smk.popularmovies.utilities.PosterLoader;
@@ -61,6 +63,7 @@ public class MovieDetailsActivity extends AppCompatActivity {
     PosterLoader mPosterLoader;
 
     private static final int VIDEO_LIST_LOADER_ID = 0;
+    private static final int REVIEW_LIST_LOADER_ID = 1;
 
     @BindView(R.id.tv_movie_details_title) TextView mTitleView;
     @BindView(R.id.rl_movie_details_poster_layout) RelativeLayout mPosterLayout;
@@ -77,6 +80,11 @@ public class MovieDetailsActivity extends AppCompatActivity {
     @BindView(R.id.tv_movie_details_video_list_empty_msg) TextView mVideoListEmptyMsg;
     @BindView(R.id.tv_movie_details_video_list_error_msg) TextView mVideoListErrorMsg;
     @BindView(R.id.ll_movie_details_video_list) LinearLayout mVideoList;
+
+    @BindView(R.id.pb_review_list_loading_indicator) ProgressBar mReviewListLoadingIndicator;
+    @BindView(R.id.tv_review_list_empty_msg) TextView mReviewListEmptyMsg;
+    @BindView(R.id.tv_review_list_error_msg) TextView mReviewListErrorMsg;
+    @BindView(R.id.ll_review_list) LinearLayout mReviewList;
 
     /**
      * Extracts extras from the intent, gets the movie data (by movieId from the intent extras) and
@@ -188,6 +196,9 @@ public class MovieDetailsActivity extends AppCompatActivity {
 
         // Load video list
         loadVideoList(false);
+
+        // Load review list
+        loadReviewList(false);
     }
 
     /**
@@ -394,6 +405,85 @@ public class MovieDetailsActivity extends AppCompatActivity {
     }
 
     /**
+     * Handles clicks on the review list error message (triggers loading the review list).
+     *
+     * @param view The clicked view.
+     */
+    @SuppressWarnings("unused")
+    @OnClick(R.id.tv_review_list_error_msg)
+    void handleReviewListErrorClick(View view) {
+        loadReviewList(true);
+    }
+
+    private void loadReviewList(boolean forceReload) {
+        setReviewListPendingView();
+
+        if (forceReload) {
+            getSupportLoaderManager()
+                    .restartLoader(REVIEW_LIST_LOADER_ID, null, new ReviewListLoaderCallbacks());
+        } else {
+            getSupportLoaderManager()
+                    .initLoader(REVIEW_LIST_LOADER_ID, null, new ReviewListLoaderCallbacks());
+        }
+    }
+
+    private void setReviewListPendingView() {
+        mReviewListLoadingIndicator.setVisibility(View.VISIBLE);
+        mReviewListErrorMsg.setVisibility(View.GONE);
+        mReviewListEmptyMsg.setVisibility(View.GONE);
+        mReviewList.setVisibility(View.GONE);
+    }
+
+    /**
+     * Update the UI after the review list was loaded. Displays a text message if there are no
+     * reviews. Otherwise populates a LinearLayout with review entries.
+     *
+     * @param reviews MovieReviews result from TMDb API.
+     */
+    private void setReviewListLoadedView(MovieReviews reviews) {
+        mReviewListLoadingIndicator.setVisibility(View.GONE);
+        mReviewListErrorMsg.setVisibility(View.GONE);
+        mReviewListEmptyMsg.setVisibility(View.GONE);
+        mReviewList.setVisibility(View.GONE);
+
+        int reviewCount = 0;
+        mReviewList.removeAllViews();
+
+        for (MovieReviewDetails details : reviews.getMovieReviewDetails()) {
+            String author = details.getAuthor();
+            String content = details.getContent();
+
+            if (TextUtils.isEmpty(author) || TextUtils.isEmpty(content)) continue;
+
+            reviewCount++;
+
+            View listItem =
+                    getLayoutInflater().inflate(R.layout.review_list_item, mReviewList, false);
+
+            TextView authorTv = (TextView) listItem.findViewById(R.id.tv_review_list_item_author);
+            authorTv.setText(author);
+
+            TextView contentTv = (TextView) listItem.findViewById(R.id.tv_review_list_item_content);
+            contentTv.setText(StringUtils.removeCarriageReturns(content));
+
+            mReviewList.addView(listItem);
+        }
+
+        if (reviewCount == 0) {
+            mReviewListEmptyMsg.setVisibility(View.VISIBLE);
+        } else {
+            mReviewList.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void setReviewListErrorView() {
+        mReviewListLoadingIndicator.setVisibility(View.GONE);
+        mReviewListErrorMsg.setVisibility(View.VISIBLE);
+        mReviewListEmptyMsg.setVisibility(View.GONE);
+        mReviewList.setVisibility(View.GONE);
+    }
+
+    /**
      * Explicitly handles presses on the back button in the AppCompat Toolbar, because otherwise the
      * parent activity gets an empty savedInstanceState when resumed.
      *
@@ -438,6 +528,36 @@ public class MovieDetailsActivity extends AppCompatActivity {
 
         @Override
         public void onLoaderReset(Loader<SingleLoader.Result<MovieVideos>> loader) {}
+
+    }
+
+    /**
+     * Class for handling review loading.
+     */
+    private class ReviewListLoaderCallbacks implements
+            LoaderManager.LoaderCallbacks<SingleLoader.Result<MovieReviews>> {
+
+        @Override
+        public Loader<SingleLoader.Result<MovieReviews>> onCreateLoader(int id, Bundle args) {
+            TmdbApiClient apiClient = TmdbApiClientFactory.createApiClient();
+            Single<MovieReviews> request = apiClient.getMovieReviews(mMovieId);
+
+            return new SingleLoader<>(MovieDetailsActivity.this, request);
+        }
+
+        @Override
+        public void onLoadFinished(Loader<SingleLoader.Result<MovieReviews>> loader,
+                                   SingleLoader.Result<MovieReviews> data) {
+            if (data.isError()) {
+                Log.e(TAG, "failed to load reviews: " + data.getError());
+                setReviewListErrorView();
+            } else {
+                setReviewListLoadedView(data.getResult());
+            }
+        }
+
+        @Override
+        public void onLoaderReset(Loader<SingleLoader.Result<MovieReviews>> loader) {}
 
     }
 

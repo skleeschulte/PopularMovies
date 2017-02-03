@@ -104,10 +104,18 @@
 
         <!-- Video list block -->
         <include
+            android:id="@+id/inc_movie_details_video_list_block"
             layout="@layout/video_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@+id/tv_movie_details_overview" />
+
+        <!-- Review list block -->
+        <include
+            layout="@layout/review_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/inc_movie_details_video_list_block" />
 
     </RelativeLayout>
 
