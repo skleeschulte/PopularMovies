@@ -232,7 +232,9 @@ public class MovieListing {
         if (!MFavoriteMoviesContentObserverRegistered) {
             MFavoriteMoviesContentObserverRegistered = true;
             Context context = Application.getContext();
-            context.getContentResolver().registerContentObserver(FavoriteMoviesContract.FavoriteMovieEntry.CONTENT_URI, true, new ContentObserver(new Handler()) {
+            context.getContentResolver().registerContentObserver(
+                    FavoriteMoviesContract.FavoriteMovieEntry.CONTENT_URI, true,
+                    new ContentObserver(new Handler()) {
                 @Override
                 public void onChange(boolean selfChange) {
                     synchronized (MovieListing.this) {
