@@ -11,6 +11,10 @@
     <string name="activity_main_postergrid_error_msg">
         Sorry, could not download movie listing data.\n\nTap to retry.
     </string>
+    <string name="activity_main_favorites_empty_msg">
+        You did not mark any movies as favorite.\n\nTo do so, tap the star icon in the top right
+        corner of a movie details view.
+    </string>
     <string name="activity_main_movie_listing_selection_title">Choose the movie listing:</string>
     <string name="activity_main_option_show_most_popular_first">
         Show most popular movies first

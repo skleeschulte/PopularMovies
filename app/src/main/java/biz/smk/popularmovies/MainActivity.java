@@ -53,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.rv_main_poster_grid) RecyclerView mPosterGridView;
     @BindView(R.id.pb_main_poster_grid_loading_indicator) ProgressBar mLoadingIndicatorView;
     @BindView(R.id.tv_main_poster_grid_error_msg) TextView mPosterGridErrorMsgView;
+    @BindView(R.id.tv_main_favorites_empty_msg) TextView mFavoritesEmptyMsgView;
 
     @BindString(R.string.activity_main_movie_listing_selection_title) String mMovieListingSelectionTitle;
     @BindString(R.string.activity_main_option_show_most_popular_first) String mOptionMostPopularFirstString;
@@ -347,10 +348,16 @@ public class MainActivity extends AppCompatActivity {
     private void setPosterGridReadyView() {
         mLoadingIndicatorView.setVisibility(View.GONE);
         mPosterGridErrorMsgView.setVisibility(View.GONE);
+        mFavoritesEmptyMsgView.setVisibility(View.GONE);
 
         if (mLayoutManagerState != null) {
             mPosterGridView.getLayoutManager().onRestoreInstanceState(mLayoutManagerState);
             mLayoutManagerState = null;
+        }
+
+        if (mMovieListingType == MovieListing.Type.FAVORITES &&
+                mPosterGridAdapter.getItemCount() == 0) {
+            mFavoritesEmptyMsgView.setVisibility(View.VISIBLE);
         }
     }
 

@@ -11,7 +11,7 @@
     <!-- Material design guide specs for image only grid lists: spacing 1dp or 4dp
          https://material.io/guidelines/components/grid-lists.html#grid-lists-specs -->
     <dimen name="poster_grid_spacing">4dp</dimen>
-    <dimen name="poster_grid_text_size_error_msg">24sp</dimen>
+    <dimen name="poster_grid_text_size_text_msg">24sp</dimen>
     <dimen name="poster_grid_item_text_size_no_poster">14sp</dimen>
     <dimen name="poster_grid_item_text_size_listing_position">14sp</dimen>
     <dimen name="poster_grid_item_text_size_error_msg">14sp</dimen>
