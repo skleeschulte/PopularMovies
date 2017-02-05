@@ -5,16 +5,26 @@
 package biz.smk.popularmovies.data;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
+import android.database.ContentObserver;
+import android.os.Handler;
+
+import org.greenrobot.eventbus.EventBus;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import biz.smk.popularmovies.Application;
+import biz.smk.popularmovies.favoritemovies.FavoriteMoviesContract;
+import biz.smk.popularmovies.favoritemovies.FavoriteMoviesHelper;
 import biz.smk.popularmovies.tmdbapi.TmdbApiClient;
 import biz.smk.popularmovies.tmdbapi.TmdbApiClientFactory;
 import biz.smk.popularmovies.tmdbapi.TmdbApiConfiguration;
 import biz.smk.popularmovies.tmdbapi.responseobjects.MovieListingMovieDetails;
 import biz.smk.popularmovies.tmdbapi.responseobjects.MovieListingPage;
 import rx.Single;
+import rx.SingleEmitter;
 import rx.functions.Action1;
 import rx.functions.Func1;
 
@@ -26,12 +36,15 @@ public class MovieListing {
     /**
      * Enumeration of the accessible listing types.
      */
-    public enum Type { TOP_RATED, POPULAR }
+    public enum Type { TOP_RATED, POPULAR, FAVORITES }
 
     private static Map<Type, MovieListing> sInstances = new HashMap<>();
 
     private Type mType;
     private TmdbApiClient mApiClient;
+
+    private Single<List<MovieListingMovieDetails>> mFavoriteMoviesSingle;
+    private boolean MFavoriteMoviesContentObserverRegistered = false;
 
     @SuppressLint("UseSparseArrays")
     private Map<Integer, Single<MovieListingPage>> mPageRequestsCache = new HashMap<>();
@@ -48,6 +61,7 @@ public class MovieListing {
             movieListing = new MovieListing(type);
             sInstances.put(type, movieListing);
         }
+
         return movieListing;
     }
 
@@ -126,6 +140,15 @@ public class MovieListing {
      * @return The total count of movies in this movie listing.
      */
     public Single<Integer> getTotalCount() {
+        if (mType == Type.FAVORITES) {
+            return getFavoriteMovies().map(new Func1<List<MovieListingMovieDetails>, Integer>() {
+                @Override
+                public Integer call(List<MovieListingMovieDetails> movieList) {
+                    return movieList.size();
+                }
+            });
+        }
+
         return getPageWithCaching(1).map(new Func1<MovieListingPage, Integer>() {
             @Override
             public Integer call(MovieListingPage movieListingPage) {
@@ -141,6 +164,15 @@ public class MovieListing {
      * @return The movie ID.
      */
     public Single<Long> getMovieId(final int index) {
+        if (mType == Type.FAVORITES) {
+            return getFavoriteMovies().map(new Func1<List<MovieListingMovieDetails>, Long>() {
+                @Override
+                public Long call(List<MovieListingMovieDetails> movieList) {
+                    return movieList.get(index).getId();
+                }
+            });
+        }
+
         int pageNr = calculatePageNr(index);
 
         return getPageWithCaching(pageNr).map(new Func1<MovieListingPage, Long>() {
@@ -150,6 +182,66 @@ public class MovieListing {
                 return movieListingPage.getResults().get(indexOnPage).getId();
             }
         });
+    }
+
+    /**
+     * Returns a Single that resolves to a list of the favorite movies.
+     *
+     * @return Single that resolves to a list of the favorite movies.
+     */
+    private synchronized Single<List<MovieListingMovieDetails>> getFavoriteMovies() {
+        if (mFavoriteMoviesSingle == null) {
+            mFavoriteMoviesSingle = Single.fromEmitter(
+                    new Action1<SingleEmitter<List<MovieListingMovieDetails>>>() {
+                @Override
+                public void call(
+                        final SingleEmitter<List<MovieListingMovieDetails>> singleEmitter) {
+                    FavoriteMoviesHelper.GetMoviesCallback callback =
+                            new FavoriteMoviesHelper.GetMoviesCallback() {
+                                public void onMoviesReceived(
+                                        List<MovieListingMovieDetails> movieList) {
+                                    if (movieList != null) {
+                                        for (MovieListingMovieDetails details : movieList) {
+                                            MovieListingMovieDetailsStore.addMovieDetails(details);
+                                        }
+
+                                        singleEmitter.onSuccess(movieList);
+                                    } else {
+                                        singleEmitter.onError(new RuntimeException("could not " +
+                                                "get favorite movies"));
+                                    }
+                                }
+                            };
+
+                    Context context = Application.getContext();
+                    FavoriteMoviesHelper.getMovies(context.getContentResolver(), callback);
+                }
+            }).cache();
+        }
+
+        registerFavoriteMoviesContentObserver();
+
+        return mFavoriteMoviesSingle;
+    }
+
+    /**
+     * Registers a content observer for the favorite movies database and invalidates the cache when
+     * changes occur.
+     */
+    private synchronized void registerFavoriteMoviesContentObserver() {
+        if (!MFavoriteMoviesContentObserverRegistered) {
+            MFavoriteMoviesContentObserverRegistered = true;
+            Context context = Application.getContext();
+            context.getContentResolver().registerContentObserver(FavoriteMoviesContract.FavoriteMovieEntry.CONTENT_URI, true, new ContentObserver(new Handler()) {
+                @Override
+                public void onChange(boolean selfChange) {
+                    synchronized (MovieListing.this) {
+                        mFavoriteMoviesSingle = null;
+                        EventBus.getDefault().post(new FavoriteMoviesChangedEvent());
+                    }
+                }
+            });
+        }
     }
 
     /**
@@ -173,5 +265,10 @@ public class MovieListing {
         int entriesPerPage = TmdbApiConfiguration.NUM_LISTING_ENTRIES_PER_PAGE;
         return indexWithinListing % entriesPerPage;
     }
+
+    /**
+     * Emitted when the favorite movies listing changes.
+     */
+    public static class FavoriteMoviesChangedEvent {}
 
 }

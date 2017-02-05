@@ -61,14 +61,16 @@ class PosterGridAdapter extends RecyclerView.Adapter<PosterGridViewHolder> {
                 .subscribe(new Action1<Integer>() {
                     @Override
                     public void call(Integer totalCount) {
+                        Log.d(TAG, "Received total count of movie listing " +
+                                mMovieListing.getType().toString() + ": " + totalCount);
+
                         if (totalCount != mTotalCount) {
                             mTotalCount = totalCount;
-                            Log.d(TAG, "Received total count of movie listing " +
-                                    mMovieListing.getType().toString() + ": " + totalCount);
                             notifyDataSetChanged();
-                            EventBus.getDefault().postSticky(
-                                    new StatusChangedEvent(StatusChangedEvent.Status.READY));
                         }
+
+                        EventBus.getDefault().postSticky(
+                                new StatusChangedEvent(StatusChangedEvent.Status.READY));
                     }
                 }, new Action1<Throwable>() {
                     @Override

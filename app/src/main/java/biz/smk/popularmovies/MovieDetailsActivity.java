@@ -6,15 +6,20 @@ package biz.smk.popularmovies;
 
 import android.annotation.SuppressLint;
 import android.content.ActivityNotFoundException;
+import android.content.AsyncQueryHandler;
+import android.content.ContentResolver;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.util.Log;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
@@ -24,10 +29,13 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.lang.ref.WeakReference;
 import java.util.Date;
 
 import biz.smk.popularmovies.data.MovieListing;
 import biz.smk.popularmovies.data.MovieListingMovieDetailsStore;
+import biz.smk.popularmovies.favoritemovies.FavoriteMoviesContract;
+import biz.smk.popularmovies.favoritemovies.FavoriteMoviesHelper;
 import biz.smk.popularmovies.tmdbapi.TmdbApiClient;
 import biz.smk.popularmovies.tmdbapi.TmdbApiClientFactory;
 import biz.smk.popularmovies.tmdbapi.responseobjects.MovieListingMovieDetails;
@@ -57,13 +65,17 @@ public class MovieDetailsActivity extends AppCompatActivity {
     private long mMovieId;
     private MovieListing.Type mFromListingType;
     private int mListingPosition;
+    private MovieListingMovieDetails mMovieDetails;
+    private String mTitle;
     private String mPosterPath;
+    private boolean mIsFavoriteMovie = false;
 
     Runnable mPosterSizeRunnable;
     PosterLoader mPosterLoader;
 
     private static final int VIDEO_LIST_LOADER_ID = 0;
     private static final int REVIEW_LIST_LOADER_ID = 1;
+    private static final int FAVORITE_MOVIE_STATUS_LOADER_ID = 2;
 
     @BindView(R.id.tv_movie_details_title) TextView mTitleView;
     @BindView(R.id.rl_movie_details_poster_layout) RelativeLayout mPosterLayout;
@@ -115,9 +127,8 @@ public class MovieDetailsActivity extends AppCompatActivity {
         }
 
         // Get movie details from details store
-        MovieListingMovieDetails details;
         try {
-            details = MovieListingMovieDetailsStore.getMovieDetails(mMovieId);
+            mMovieDetails = MovieListingMovieDetailsStore.getMovieDetails(mMovieId);
         } catch (IllegalArgumentException e) {
             Log.e(TAG, "Failed to get details for movie ID " + mMovieId + ": " + e.toString());
             String msg = getString(R.string.activity_movie_details_load_details_failure);
@@ -127,8 +138,8 @@ public class MovieDetailsActivity extends AppCompatActivity {
         }
 
         // Display title (if available)
-        final String title = details.getTitle();
-        if (title == null) {
+        mTitle = mMovieDetails.getTitle();
+        if (mTitle == null) {
             mTitleView.setVisibility(View.GONE);
         } else {
             // Post runnable to title auto-resize text view so that it will be laid out (und thus
@@ -136,19 +147,19 @@ public class MovieDetailsActivity extends AppCompatActivity {
             mTitleView.post(new Runnable() {
                 @Override
                 public void run() {
-                    mTitleView.setText(title);
+                    mTitleView.setText(mTitle);
                 }
             });
         }
 
         // Store poster path (if available) - poster loading is started in onResume
-        mPosterPath = details.getPosterPath();
+        mPosterPath = mMovieDetails.getPosterPath();
         if (mPosterPath == null) {
             setNoPosterView();
         }
 
         // Display release date (if available)
-        Date releaseDate = details.getParsedReleaseDate();
+        Date releaseDate = mMovieDetails.getParsedReleaseDate();
         if (releaseDate == null) {
             mReleaseDateView.setVisibility(View.GONE);
         } else {
@@ -160,7 +171,7 @@ public class MovieDetailsActivity extends AppCompatActivity {
         }
 
         // Display rating (if available)
-        double rating = details.getVoteAverage();
+        double rating = mMovieDetails.getVoteAverage();
         if (rating == -1) {
             mRatingView.setVisibility(View.GONE);
         } else {
@@ -189,7 +200,7 @@ public class MovieDetailsActivity extends AppCompatActivity {
         }
 
         // Display overview (if available)
-        String overview = details.getOverview();
+        String overview = mMovieDetails.getOverview();
         if (overview != null) {
             mOverviewView.setText(overview);
         }
@@ -199,6 +210,9 @@ public class MovieDetailsActivity extends AppCompatActivity {
 
         // Load review list
         loadReviewList(false);
+
+        // Load favorite movie status
+        loadFavoriteMovieStatus(false);
     }
 
     /**
@@ -483,6 +497,48 @@ public class MovieDetailsActivity extends AppCompatActivity {
         mReviewList.setVisibility(View.GONE);
     }
 
+    private void loadFavoriteMovieStatus(boolean forceReload) {
+        if (forceReload) {
+            getSupportLoaderManager()
+                    .restartLoader(FAVORITE_MOVIE_STATUS_LOADER_ID, null,
+                            new FavoriteMovieStatusLoaderCallbacks());
+        } else {
+            getSupportLoaderManager()
+                    .initLoader(FAVORITE_MOVIE_STATUS_LOADER_ID, null,
+                            new FavoriteMovieStatusLoaderCallbacks());
+        }
+    }
+
+    private void toggleFavoriteMovieStatus() {
+        FavoriteMovieStatusUpdateQueryHandler handler =
+                new FavoriteMovieStatusUpdateQueryHandler(getContentResolver(), this);
+
+        if (mIsFavoriteMovie) {
+            FavoriteMoviesHelper.removeFavoriteMovie(mMovieId, handler);
+        } else {
+            FavoriteMoviesHelper.addFavoriteMovie(mMovieDetails, handler);
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_activity_movie_details, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        MenuItem favoriteMovieMenuItem = menu.findItem(R.id.action_mark_as_favorite);
+
+        if (mIsFavoriteMovie) {
+            favoriteMovieMenuItem.setIcon(R.drawable.ic_star_accent_24dp);
+        } else {
+            favoriteMovieMenuItem.setIcon(R.drawable.ic_star_border_white_24dp);
+        }
+
+        return super.onPrepareOptionsMenu(menu);
+    }
+
     /**
      * Explicitly handles presses on the back button in the AppCompat Toolbar, because otherwise the
      * parent activity gets an empty savedInstanceState when resumed.
@@ -495,6 +551,9 @@ public class MovieDetailsActivity extends AppCompatActivity {
         switch (item.getItemId()) {
             case android.R.id.home:
                 onBackPressed();
+                return true;
+            case R.id.action_mark_as_favorite:
+                toggleFavoriteMovieStatus();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -558,6 +617,67 @@ public class MovieDetailsActivity extends AppCompatActivity {
 
         @Override
         public void onLoaderReset(Loader<SingleLoader.Result<MovieReviews>> loader) {}
+
+    }
+
+    /**
+     * Class for handling favorite movie loading.
+     */
+    private class FavoriteMovieStatusLoaderCallbacks implements
+            LoaderManager.LoaderCallbacks<Cursor> {
+
+        @Override
+        public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+            return new CursorLoader(MovieDetailsActivity.this,
+                    FavoriteMoviesContract.FavoriteMovieEntry.CONTENT_URI,
+                    new String[] { FavoriteMoviesContract.FavoriteMovieEntry._ID },
+                    FavoriteMoviesContract.FavoriteMovieEntry.COLUMN_MOVIE_ID + " = ?",
+                    new String[] { String.valueOf(mMovieId) },
+                    null);
+        }
+
+        @Override
+        public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+            boolean isFavoriteMovie = data != null && data.getCount() > 0;
+            if (mIsFavoriteMovie != isFavoriteMovie) {
+                mIsFavoriteMovie = isFavoriteMovie;
+                invalidateOptionsMenu();
+            }
+        }
+
+        @Override
+        public void onLoaderReset(Loader<Cursor> loader) {}
+
+    }
+
+    /**
+     * Class for handling updating the UI after toggling the favorite movie status.
+     */
+    private static class FavoriteMovieStatusUpdateQueryHandler extends AsyncQueryHandler {
+
+        private WeakReference<MovieDetailsActivity> mMovieDetailsActivityWeakReference;
+
+        FavoriteMovieStatusUpdateQueryHandler(ContentResolver cr, MovieDetailsActivity activity) {
+            super(cr);
+            mMovieDetailsActivityWeakReference = new WeakReference<>(activity);
+        }
+
+        @Override
+        protected void onInsertComplete(int token, Object cookie, Uri uri) {
+            loadFavoriteMovieStatus();
+        }
+
+        @Override
+        protected void onDeleteComplete(int token, Object cookie, int result) {
+            loadFavoriteMovieStatus();
+        }
+
+        private void loadFavoriteMovieStatus() {
+            MovieDetailsActivity movieDetailsActivity = mMovieDetailsActivityWeakReference.get();
+            if (movieDetailsActivity != null) {
+                movieDetailsActivity.loadFavoriteMovieStatus(true);
+            }
+        }
 
     }
 

@@ -42,11 +42,13 @@ public class MainActivity extends AppCompatActivity {
     private static final MovieListing.Type DEFAULT_MOVIE_LISTING_TYPE = MovieListing.Type.POPULAR;
     private static final String PREFS_FIELD_SELECTED_MOVIE_LISTING = "selected_movie_listing";
     private MovieListing.Type mMovieListingType;
+    private MovieListing.Type mPreviousMovieListingType;
 
     private static final String STATE_FIELD_LAYOUT_MANAGER_STATE = "layout_manager_state";
     private Parcelable mLayoutManagerState;
 
     private PosterGridAdapter mPosterGridAdapter;
+    private boolean mFavoriteMoviesChanged = false;
 
     @BindView(R.id.rv_main_poster_grid) RecyclerView mPosterGridView;
     @BindView(R.id.pb_main_poster_grid_loading_indicator) ProgressBar mLoadingIndicatorView;
@@ -89,6 +91,18 @@ public class MainActivity extends AppCompatActivity {
         String listingType = preferences.getString(PREFS_FIELD_SELECTED_MOVIE_LISTING,
                 DEFAULT_MOVIE_LISTING_TYPE.toString());
         setMovieListingType(MovieListing.Type.valueOf(listingType));
+
+        // Register to the EventBus.
+        EventBus.getDefault().register(this);
+    }
+
+    /**
+     * Unregisters from the EventBus.
+     */
+    @Override
+    protected void onDestroy() {
+        EventBus.getDefault().unregister(this);
+        super.onDestroy();
     }
 
     /**
@@ -104,6 +118,28 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
+     * Updates the options menu to reflect the current state.
+     *
+     * @param menu {@inheritDoc}
+     * @return {@inheritDoc}
+     */
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        MenuItem selectListing = menu.findItem(R.id.action_select_movie_listing);
+        MenuItem showFavorites = menu.findItem(R.id.action_show_favorite_movies);
+
+        if (mMovieListingType == MovieListing.Type.FAVORITES) {
+            selectListing.setVisible(false);
+            showFavorites.setIcon(R.drawable.ic_star_white_24dp);
+        } else {
+            selectListing.setVisible(true);
+            showFavorites.setIcon(R.drawable.ic_star_border_white_24dp);
+        }
+
+        return super.onPrepareOptionsMenu(menu);
+    }
+
+    /**
      * Handles options menu item selections.
      *
      * @param item {@inheritDoc}
@@ -114,6 +150,9 @@ public class MainActivity extends AppCompatActivity {
         switch(item.getItemId()) {
             case R.id.action_select_movie_listing:
                 showMovieListingSelectionDialog();
+                return true;
+            case R.id.action_show_favorite_movies:
+                toggleShowFavoriteMovies();
                 return true;
             case R.id.action_about:
                 Intent aboutActivityIntent = new Intent(this, AboutActivity.class);
@@ -166,6 +205,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
+     * Toggles displaying the users favorite movies.
+     */
+    private void toggleShowFavoriteMovies() {
+        if (mMovieListingType == MovieListing.Type.FAVORITES) {
+            if (mPreviousMovieListingType != null) {
+                setMovieListingType(mPreviousMovieListingType);
+            } else {
+                setMovieListingType(DEFAULT_MOVIE_LISTING_TYPE);
+            }
+        } else {
+            setMovieListingType(MovieListing.Type.FAVORITES);
+        }
+    }
+
+    /**
      * Sets the movie listing type. This changes the toolbar title and updates the poster grid
      * adapter. The type is persisted in the shared preferences.
      *
@@ -181,10 +235,16 @@ public class MainActivity extends AppCompatActivity {
                 case TOP_RATED:
                     toolbar.setTitle(R.string.activity_main_title_top_rated);
                     break;
+                case FAVORITES:
+                    toolbar.setTitle(R.string.activity_main_title_favorites);
+                    break;
             }
         }
 
+        mPreviousMovieListingType = mMovieListingType;
         mMovieListingType = type;
+
+        invalidateOptionsMenu();
         mPosterGridAdapter.setMovieListingType(mMovieListingType);
 
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -203,21 +263,36 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Registers to the EventBus.
+     * Handles favorite movies changed events.
+     *
+     * @param event The event.
      */
-    @Override
-    public void onStart() {
-        super.onStart();
-        EventBus.getDefault().register(this);
+    @SuppressWarnings("unused")
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onPosterGridAdapterStatusChanged(MovieListing.FavoriteMoviesChangedEvent event) {
+        mFavoriteMoviesChanged = true;
     }
 
     /**
-     * Unregisters from the EventBus.
+     * Update poster grid adapter when favorite movies listing changed.
      */
     @Override
-    public void onStop() {
-        super.onStop();
-        EventBus.getDefault().unregister(this);
+    protected void onResume() {
+        super.onResume();
+        if (mFavoriteMoviesChanged && mMovieListingType == MovieListing.Type.FAVORITES) {
+            mPosterGridAdapter.setMovieListingType(MovieListing.Type.FAVORITES);
+            mFavoriteMoviesChanged = false;
+        }
+    }
+
+    /**
+     * Save poster grid layout manager state so it can be restored if the adapter needs to be
+     * refreshed on resume.
+     */
+    @Override
+    protected void onPause() {
+        mLayoutManagerState = mPosterGridView.getLayoutManager().onSaveInstanceState();
+        super.onPause();
     }
 
     /**

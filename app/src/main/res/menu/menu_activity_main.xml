@@ -10,8 +10,15 @@
         android:icon="@drawable/ic_sort_white_24dp" />
 
     <item
+        android:id="@+id/action_show_favorite_movies"
+        android:title="@string/menu_activity_main_show_favorite_movies"
+        android:orderInCategory="2"
+        app:showAsAction="ifRoom"
+        android:icon="@drawable/ic_star_border_white_24dp" />
+
+    <item
         android:id="@+id/action_about"
         android:title="@string/menu_activity_main_about"
-        android:orderInCategory="2" />
+        android:orderInCategory="3" />
 
 </menu>
