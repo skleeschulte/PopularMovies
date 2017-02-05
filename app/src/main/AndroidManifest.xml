@@ -42,7 +42,7 @@
         </activity>
 
         <provider
-            android:authorities="biz.smk.popularmovies.favoritemovies"
+            android:authorities="@string/favorite_movies_content_provider_authority"
             android:name=".favoritemovies.FavoriteMoviesContentProvider"
             android:exported="false" />
 

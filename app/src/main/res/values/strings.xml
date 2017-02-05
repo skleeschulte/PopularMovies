@@ -66,6 +66,11 @@
     <!-- Used in menu_activity_movie_details.xml -->
     <string name="menu_activity_movie_details_mark_as_favorite">Favorite movie</string>
 
+    <!-- Used in FavoriteMoviesContract and AndroidManifest.xml -->
+    <string name="favorite_movies_content_provider_authority">
+        biz.smk.popularmovies.favoritemovies
+    </string>
+
     <!-- Used in activity_about.xml -->
     <string name="activity_about_text">
         \"Popular Movies\" app

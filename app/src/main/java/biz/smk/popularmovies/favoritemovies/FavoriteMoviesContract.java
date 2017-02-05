@@ -7,13 +7,17 @@ package biz.smk.popularmovies.favoritemovies;
 import android.net.Uri;
 import android.provider.BaseColumns;
 
+import biz.smk.popularmovies.Application;
+import biz.smk.popularmovies.R;
+
 /**
  * Database / content provider contract for favorite movies.
  */
 @SuppressWarnings("WeakerAccess")
 public class FavoriteMoviesContract {
 
-    public static final String AUTHORITY = FavoriteMoviesContract.class.getPackage().getName();
+    public static final String AUTHORITY =
+            Application.getContext().getString(R.string.favorite_movies_content_provider_authority);
 
     public static final Uri CONTENT_BASE_URI = Uri.parse("content://" + AUTHORITY);
 
